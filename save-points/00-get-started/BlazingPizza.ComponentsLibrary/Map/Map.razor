@@ -4,7 +4,7 @@
 <div id="@elementId" style="height: 100%; width: 100%;"></div>
 
 @code {
-    string elementId = $"map-{Guid.NewGuid().ToString("D")}";
+    string elementId = $"map-{Guid.NewGuid().ToString()}";
     
     [Parameter] public double Zoom { get; set; }
     [Parameter] public List<Marker> Markers { get; set; }

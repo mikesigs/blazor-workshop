@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using BlazingPizza.Server.Data;
 
-namespace BlazingPizza.Server
+namespace BlazingPizza.Server.Controllers
 {
     [Route("pizzas")]
     [ApiController]

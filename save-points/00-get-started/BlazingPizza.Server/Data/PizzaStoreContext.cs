@@ -1,9 +1,10 @@
-﻿﻿using IdentityServer4.EntityFramework.Options;
+﻿﻿using BlazingPizza.Server.Model;
+using IdentityServer4.EntityFramework.Options;
 using Microsoft.AspNetCore.ApiAuthorization.IdentityServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace BlazingPizza.Server
+namespace BlazingPizza.Server.Data
 {
     public class PizzaStoreContext : ApiAuthorizationDbContext<PizzaStoreUser>
     {

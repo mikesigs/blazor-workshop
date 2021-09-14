@@ -2,15 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
+using BlazingPizza.Server.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using WebPush;
 
-namespace BlazingPizza.Server
+namespace BlazingPizza.Server.Controllers
 {
     [Route("orders")]
     [ApiController]
-    // [Authorize]
+    [Authorize]
     public class OrdersController : Controller
     {
         private readonly PizzaStoreContext _db;
@@ -24,7 +28,7 @@ namespace BlazingPizza.Server
         public async Task<ActionResult<List<OrderWithStatus>>> GetOrders()
         {
             var orders = await _db.Orders
-                // .Where(o => o.UserId == GetUserId())
+                .Where(o => o.UserId == GetUserId())
                 .Include(o => o.DeliveryLocation)
                 .Include(o => o.Pizzas).ThenInclude(p => p.Special)
                 .Include(o => o.Pizzas).ThenInclude(p => p.Toppings).ThenInclude(t => t.Topping)
@@ -39,7 +43,7 @@ namespace BlazingPizza.Server
         {
             var order = await _db.Orders
                 .Where(o => o.OrderId == orderId)
-                // .Where(o => o.UserId == GetUserId())
+                .Where(o => o.UserId == GetUserId())
                 .Include(o => o.DeliveryLocation)
                 .Include(o => o.Pizzas).ThenInclude(p => p.Special)
                 .Include(o => o.Pizzas).ThenInclude(p => p.Toppings).ThenInclude(t => t.Topping)
@@ -58,7 +62,7 @@ namespace BlazingPizza.Server
         {
             order.CreatedTime = DateTime.Now;
             order.DeliveryLocation = new LatLong(51.5001, -0.1239);
-            // order.UserId = GetUserId();
+            order.UserId = GetUserId();
 
             // Enforce existence of Pizza.SpecialId and Topping.ToppingId
             // in the database - prevent the submitter from making up
@@ -85,6 +89,8 @@ namespace BlazingPizza.Server
                 _ = TrackAndSendNotificationsAsync(order, subscription);
             }
 
+            // Simulate a longer processing time to demonstrate disabling of the Submit button
+            await Task.Delay(TimeSpan.FromSeconds(1));
             return order.OrderId;
         }
 
@@ -105,10 +111,23 @@ namespace BlazingPizza.Server
             await SendNotificationAsync(order, subscription, "Your order is now delivered. Enjoy!");
         }
 
-        private static Task SendNotificationAsync(Order order, NotificationSubscription subscription, string message)
+        private static async Task SendNotificationAsync(Order order, NotificationSubscription subscription, string message)
         {
-            // This will be implemented later
-            return Task.CompletedTask;
+            const string publicKey = "BLC8GOevpcpjQiLkO7JmVClQjycvTCYWm6Cq_a7wJZlstGTVZvwGFFHMYfXt6Njyvgx_GlXJeo5cSiZ1y4JOx1o";
+            const string privateKey = "OrubzSz3yWACscZXjFQrrtDwCKg-TGFuWhluQ2wLXDo";
+
+            var pushSubscription = new PushSubscription(subscription.Url, subscription.P256dh, subscription.Auth);
+            var vapidDetails = new VapidDetails("mailto:<somone@example.com>", publicKey, privateKey);
+            var webPushClient = new WebPushClient();
+            try
+            {
+                 var payload = JsonSerializer.Serialize(new { message, url = $"myorders/{order.OrderId}"});
+                 await webPushClient.SendNotificationAsync(pushSubscription, payload, vapidDetails);
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteLineAsync("Error sending push notification: " + ex.Message);
+            }
         }
     }
 }
